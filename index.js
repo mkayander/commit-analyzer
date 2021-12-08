@@ -1,10 +1,11 @@
-const {isUndefined} = require('lodash');
+const { isUndefined } = require('lodash');
 const parser = require('conventional-commits-parser').sync;
 const filter = require('conventional-commits-filter');
 const debug = require('debug')('semantic-release:commit-analyzer');
 const loadParserConfig = require('./lib/load-parser-config');
 const loadReleaseRules = require('./lib/load-release-rules');
 const analyzeCommit = require('./lib/analyze-commit');
+const sanitizeCommit = require('./lib/sanitize-commit');
 const compareReleaseTypes = require('./lib/compare-release-types');
 const RELEASE_TYPES = require('./lib/default-release-types');
 const DEFAULT_RELEASE_RULES = require('./lib/default-release-rules');
@@ -24,14 +25,16 @@ const DEFAULT_RELEASE_RULES = require('./lib/default-release-rules');
  * @returns {String|null} the type of release to create based on the list of commits or `null` if no release has to be done.
  */
 async function analyzeCommits(pluginConfig, context) {
-  const {commits, logger} = context;
+  const { commits: rawCommits, logger } = context;
+  const commits = rawCommits.map((item) => sanitizeCommit(item, logger));
+
   const releaseRules = loadReleaseRules(pluginConfig, context);
   const config = await loadParserConfig(pluginConfig, context);
   let releaseType = null;
 
   filter(
     commits
-      .filter(({message, hash}) => {
+      .filter(({ message, hash }) => {
         if (!message.trim()) {
           debug('Skip commit %s with empty message', hash);
           return false;
@@ -39,8 +42,13 @@ async function analyzeCommits(pluginConfig, context) {
 
         return true;
       })
-      .map(({message, ...commitProps}) => ({rawMsg: message, message, ...commitProps, ...parser(message, config)}))
-  ).every(({rawMsg, ...commit}) => {
+      .map(({ message, ...commitProps }) => ({
+        rawMsg: message,
+        message,
+        ...commitProps,
+        ...parser(message, config),
+      }))
+  ).every(({ rawMsg, ...commit }) => {
     logger.log(`Analyzing commit: %s`, rawMsg);
     let commitReleaseType;
 
@@ -79,4 +87,4 @@ async function analyzeCommits(pluginConfig, context) {
   return releaseType;
 }
 
-module.exports = {analyzeCommits};
+module.exports = { analyzeCommits };
