@@ -1,4 +1,4 @@
-# **commit-analyzer**
+# **commit-analyzer-bb**
 
 [**semantic-release**](https://github.com/semantic-release/semantic-release) plugin to analyze commits with [conventional-changelog](https://github.com/conventional-changelog/conventional-changelog)
 
